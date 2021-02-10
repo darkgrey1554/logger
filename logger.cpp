@@ -335,4 +335,191 @@ namespace LoggerSpace
         if (ModeLog <= LogMode::WARNING && AskStatusLog == Status::ON) Logger::WriteLogMesseng(LogMode::WARNING, &sstr);
         if (ModeSysLog <= LogMode::WARNING && AskStatusSysLog == Status::ON) Logger::WriteLogSysMesseng(LogMode::WARNING, &sstr);
     }
+
+    void Logger::WriteLogERR(const char* form, int code_error, int syscode_error)
+    {
+        std::string str;
+        const char* sstr;
+        if (code_error == NULL) { str += "NULL\t"; }
+        else { str += std::to_string(code_error) + '\t'; }
+
+        if (syscode_error == NULL) { str += "NULL\t"; }
+        else { str += std::to_string(syscode_error) + '\t'; }
+
+        str += form;
+        sstr = str.c_str();
+
+        if (AskStatusLog == Status::ON) Logger::WriteLogMesseng(LogMode::ERR, &sstr);
+        if (AskStatusSysLog == Status::ON) Logger::WriteLogSysMesseng(LogMode::ERR, &sstr);
+
+    }
+
+
+
+    // --- thread log --- ///
+    int Logger::ThreadWriteLog()
+    {
+        StatusLog = Status::ON;
+        initthread = 0;
+        int zz = 0;
+
+#ifdef _WIN32
+        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+        HANDLE file_log = NULL;
+        UINT64 t1, t2;
+        SYSTEMTIME t_now;
+        LARGE_INTEGER SizeFileNow;
+#endif
+
+#ifdef __linux__
+        int file_log;
+        timeval t_now;
+        long t1, t2;
+        struct stat stat_file;
+#endif
+
+        /// ---  checking the number of days of continuous recording --- ///
+        std::string str;
+        char numlist = 0;
+        char count_empty_list = 0;
+        try
+        {
+
+            for (;;)
+            {
+                zz++;
+#ifdef _WIN32
+                GetLocalTime(&t_now);
+                SystemTimeToFileTime(&t_last, (FILETIME*)&t1);
+                SystemTimeToFileTime(&t_now, (FILETIME*)&t2);
+#endif
+#ifdef __linux__
+                gettimeofday(&t_now, NULL);
+                t1 = t_last.tv_sec;
+                t2 = t_now.tv_sec;
+#endif
+                t1 = t1 / 1000 / 1000 / 10 / 60 / 60 / 24;
+                t2 = t2 / 1000 / 1000 / 10 / 60 / 60 / 24;
+                if ((t2 - t1) >= DayWrite)
+                {
+                    str.clear();
+                    str = NameFile;
+                    str.insert(NameFile.find('.', 0), "_");
+                    str.insert(str.find('.', 0), std::to_string(count_file));
+#ifdef _WIN32
+                    MoveFileA(NameFile.c_str(), str.c_str());
+                    GetLocalTime(&t_last);
+#endif
+#ifdef __linux__
+                    rename(NameFile.c_str(), str.c_str());
+                    gettimeofday(&t_last, NULL);
+#endif
+                    NameFile = take_log_name(NameLog);
+                    count_file = 0;
+                }
+
+                /// --- replacement of a log list --- ///
+                event_protect_WrDel_list.lock();
+                numlist = work_list;
+                work_list = (work_list + 1) & 1;
+                event_protect_WrDel_list.unlock();
+
+
+                /// --- write in log file --- ///
+                if (!LogList[numlist].empty())
+                {
+                    count_empty_list = 0;
+#ifdef _WIN32
+                    file_log = CreateFileA(NameFile.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_FLAG_WRITE_THROUGH, NULL);
+                    SetFilePointer(file_log, 0, 0, FILE_END);
+#endif
+#ifdef __linux__
+                    file_log = open(NameFile.c_str(), O_CREAT | O_RDWR | O_APPEND, 0xffffff);
+#endif 
+
+                    while (!LogList[numlist].empty())
+                    {
+                        str.clear();
+                        str = LogList[numlist].front();
+#ifdef _WIN32
+                        WriteFile(file_log, str.c_str(), str.length(), NULL, NULL);
+#endif
+#ifdef __linux__
+                        write(file_log, str.c_str(), str.length());
+#endif 
+                        LogList[numlist].pop_front();
+                    }
+
+                    /// --- check size log file --- ///
+#ifdef _WIN32
+                    GetFileSizeEx(file_log, &SizeFileNow);
+                    if (SizeFileNow.QuadPart > SizeLogFile)
+                    {
+                        CloseHandle(file_log);
+                        str.clear();
+                        str = NameFile;
+                        str.insert(NameFile.find('.', 0), "_");
+                        str.insert(str.find('.', 0), std::to_string(count_file));
+                        count_file++;
+                        MoveFileA(NameFile.c_str(), str.c_str());
+                        if (NameFile != take_log_name(NameLog))
+                        {
+                            NameFile = take_log_name(NameLog);
+                            count_file = 0;
+                        }
+                        GetLocalTime(&t_last);
+                    }
+                    else CloseHandle(file_log);
+#endif
+#ifdef __linux__
+                    close(file_log);
+                    stat(NameFile.c_str(), &stat_file);
+                    if (stat_file.st_size > SizeLogFile)
+                    {
+                        str.clear();
+                        str = NameFile;
+                        str.insert(NameFile.find('.', 0), "_");
+                        str.insert(str.find('.', 0), std::to_string(count_file));
+                        count_file++;
+                        rename(NameFile.c_str(), str.c_str());
+                        if (NameFile != take_log_name(NameLog))
+                        {
+                            NameFile = take_log_name(NameLog);
+                            count_file = 0;
+                        }
+                        gettimeofday(&t_last, NULL);
+                    }
+#endif
+                }
+                else
+                {
+                    count_empty_list++;
+                    if (count_empty_list >= 2)
+                    {
+                        count_empty_list = 0;
+                        mutex_turn_log.lock();
+                        if (AskStatusLog == Status::OFF)
+                        {
+                            StatusLog = Status::OFF;
+                            mutex_turn_log.unlock();
+                            break;
+                        }
+                        mutex_turn_log.unlock();
+#ifdef _WIN32
+                        Sleep(1);
+#endif 
+#ifdef __linux__
+                        usleep(1000);
+#endif                        
+                    }
+                }
+            }
+        }
+        catch (...)
+        {
+            StatusLog = Status::OFF;
+        }
+        return 0;
+    }
 }
+

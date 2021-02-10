@@ -1,0 +1,8 @@
+﻿  logger.cpp
+  logger_test.cpp
+logger.obj : error LNK2001: неразрешенный внешний символ ""private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __thiscall LoggerSpace::Logger::take_log_name(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,int)" (?take_log_name@Logger@LoggerSpace@@AAE?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V34@H@Z)"
+logger.obj : error LNK2001: неразрешенный внешний символ ""private: int __thiscall LoggerSpace::Logger::ThreadSysWriteLog(void)" (?ThreadSysWriteLog@Logger@LoggerSpace@@AAEHXZ)"
+logger_test.obj : error LNK2001: неразрешенный внешний символ ""public: void __thiscall LoggerSpace::Logger::SetNameLog(char const *)" (?SetNameLog@Logger@LoggerSpace@@QAEXPBD@Z)"
+logger_test.obj : error LNK2001: неразрешенный внешний символ ""public: void __thiscall LoggerSpace::Logger::SetLogMode(enum LoggerSpace::LogMode)" (?SetLogMode@Logger@LoggerSpace@@QAEXW4LogMode@2@@Z)"
+logger_test.obj : error LNK2001: неразрешенный внешний символ ""public: void __thiscall LoggerSpace::Logger::SetSizeFile(int)" (?SetSizeFile@Logger@LoggerSpace@@QAEXH@Z)"
+D:\CATE_WORK\logger\Release\logger.exe : fatal error LNK1120: неразрешенных внешних элементов: 5
