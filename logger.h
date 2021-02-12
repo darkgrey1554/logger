@@ -72,39 +72,39 @@ namespace LoggerSpace
         std::list <std::string> LogList[2];  // lists messengs
         std::string NameFile;                // name log file for open file
         std::string NameLog;                 // name log file
-
+        
         int SizeLogFile = 1 * 1024 * 1024;    // max size log file
         LogMode ModeLog = LogMode::DEBUG;     // mode  logger
         int DayWrite = 1;                     // maximum duration of file recording (days)
-
-
-
-
+       
+        
+        
+        
         Status AskStatusSysLog = Status::OFF;
         std::mutex mutex_turn_syslog;
         char initsysthread = 0;
         //char flag_sys_end = 0;
         char work_syslist = 0;
         std::thread RiverSysWrite;
-        Status StatusSysLog = Status::OFF;
+        Status StatusSysLog  = Status::OFF;
         std::list <MessengSysLog> LogSysList[2];
         std::mutex event_protect_WrDel_Syslist;
         std::mutex event_sys_write;
         std::string NameSysLog;
         LogMode ModeSysLog = LogMode::DEBUG;
 
-#ifdef _WIN32
-        SYSTEMTIME t_last;
+     #ifdef _WIN32
+        SYSTEMTIME t_last;    
         HANDLE handelsyslog = NULL; // point contact with winlog
-#endif // _WIN32       
-#ifdef __linux__
-        timeval t_last;
-#endif // __linux__
+     #endif // _WIN32       
+     #ifdef __linux__
+        timeval t_last; 
+     #endif // __linux__
 
 
         int ThreadWriteLog();   // thread write 
         int ThreadSysWriteLog();
-        void WriteLogMesseng(LoggerSpace::LogMode current_mode, const char** form); // func write in log list
+        void WriteLogMesseng(LoggerSpace::LogMode current_mode,const char** form); // func write in log list
         void WriteLogSysMesseng(LoggerSpace::LogMode current_mode, const char** form);
         std::string take_log_name(std::string first_str, int count = -1);
 
@@ -113,13 +113,13 @@ namespace LoggerSpace
         void operator=(const Logger&) = delete;
         Logger() = delete;
         Logger(const char* str);
-        ~Logger();
+        ~Logger(); 
         static Logger* p_contact;
-        static std::mutex MutLogInit;
-
+        static std::mutex MutLogInit;  
+            
     public:
 
-
+              
 
         static Logger* getpointcontact(const char* NameLog = "log"); // access to class
 
